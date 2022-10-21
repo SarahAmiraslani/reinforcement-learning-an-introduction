@@ -39,7 +39,7 @@ ALPHA = 0.1
 GAMMA = 1.0
 
 # possible actions in B, maybe 10 actions
-ACTIONS_B = range(0, 10)
+ACTIONS_B = range(10)
 
 # all possible actions
 STATE_ACTIONS = [[ACTION_A_RIGHT, ACTION_A_LEFT], ACTIONS_B]
@@ -54,15 +54,12 @@ TRANSITION = [[STATE_TERMINAL, STATE_B], [STATE_TERMINAL] * len(ACTIONS_B)]
 def choose_action(state, q_value):
     if np.random.binomial(1, EPSILON) == 1:
         return np.random.choice(STATE_ACTIONS[state])
-    else:
-        values_ = q_value[state]
-        return np.random.choice([action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
+    values_ = q_value[state]
+    return np.random.choice([action_ for action_, value_ in enumerate(values_) if value_ == np.max(values_)])
 
 # take @action in @state, return the reward
 def take_action(state, action):
-    if state == STATE_A:
-        return 0
-    return np.random.normal(-0.1, 1)
+    return 0 if state == STATE_A else np.random.normal(-0.1, 1)
 
 # if there are two state action pair value array, use double Q-Learning
 # otherwise use normal Q-Learning
@@ -110,7 +107,7 @@ def figure_6_7():
         q = copy.deepcopy(INITIAL_Q)
         q1 = copy.deepcopy(INITIAL_Q)
         q2 = copy.deepcopy(INITIAL_Q)
-        for ep in range(0, episodes):
+        for ep in range(episodes):
             left_counts_q[run, ep] = q_learning(q)
             left_counts_double_q[run, ep] = q_learning(q1, q2)
     left_counts_q = left_counts_q.mean(axis=0)

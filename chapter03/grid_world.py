@@ -60,17 +60,17 @@ def draw_image(image):
 
         # add state labels
         if [i, j] == A_POS:
-            val = str(val) + " (A)"
+            val = f"{str(val)} (A)"
         if [i, j] == A_PRIME_POS:
             val = str(val) + " (A')"
         if [i, j] == B_POS:
-            val = str(val) + " (B)"
+            val = f"{str(val)} (B)"
         if [i, j] == B_PRIME_POS:
             val = str(val) + " (B')"
-        
+
         tb.add_cell(i, j, width, height, text=val,
                     loc='center', facecolor='white')
-        
+
 
     # Row and column labels...
     for i in range(len(image)):
@@ -97,20 +97,17 @@ def draw_policy(optimal_values):
             next_vals.append(optimal_values[next_state[0],next_state[1]])
 
         best_actions=np.where(next_vals == np.max(next_vals))[0]
-        val=''
-        for ba in best_actions:
-            val+=ACTIONS_FIGS[ba]
-        
+        val = ''.join(ACTIONS_FIGS[ba] for ba in best_actions)
         # add state labels
         if [i, j] == A_POS:
-            val = str(val) + " (A)"
+            val += " (A)"
         if [i, j] == A_PRIME_POS:
-            val = str(val) + " (A')"
+            val += " (A')"
         if [i, j] == B_POS:
-            val = str(val) + " (B)"
+            val += " (B)"
         if [i, j] == B_PRIME_POS:
-            val = str(val) + " (B')"
-        
+            val += " (B')"
+
         tb.add_cell(i, j, width, height, text=val,
                 loc='center', facecolor='white')
 

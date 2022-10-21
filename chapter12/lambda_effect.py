@@ -98,7 +98,7 @@ class IHT:
 def hashcoords(coordinates, m, readonly=False):
     if type(m) == IHT: return m.getindex(tuple(coordinates), readonly)
     if type(m) == int: return basehash(tuple(coordinates)) % m
-    if m == None: return coordinates
+    if m is None: return coordinates
 
 from math import floor, log
 from itertools import zip_longest
@@ -187,7 +187,7 @@ def update_trace_vector(agent, method, state, action=None):
                     z[id_w] = 0
 
     for id_w in x_ids:
-        if (method == 'replace') or (method == 'replace_reset'):
+        if method in ['replace', 'replace_reset']:
             z[id_w] = 1
         elif method == 'accumulating':
             z[id_w] += 1
@@ -226,7 +226,7 @@ class RandomWalkAgent:
         # Eligibility trace
         self._z = np.zeros(self._n_states)
         # Id initial state
-        self._init_state = int(self._n_states/2) + 1
+        self._init_state = self._n_states // 2 + 1
         # Id terminal states
         self._terminal_states = [0, self._n_states - 1]
         # Action space
@@ -256,10 +256,7 @@ class RandomWalkAgent:
 
     def v_hat(self, state):
         """Returns the approximated value for state, w.r.t. the weight vector."""
-        if state in self._terminal_states:
-            return 0. # by convention : R(S(T)) = 0
-        value = self._w[state]
-        return value
+        return 0. if state in self._terminal_states else self._w[state]
 
     def grad_v_hat(self, state):
         """Compute the gradient of the state value w.r.t. the weight vector."""
@@ -284,8 +281,7 @@ class RandomWalkAgent:
 
         assert method in ['replace', 'accumulating'], 'Invalid method'
 
-        for n_ep in range(n_episodes):
-
+        for _ in range(n_episodes):
             curr_state = self._init_state
             self._z = np.zeros(self._n_states)
 
@@ -408,9 +404,7 @@ class MountainCarAgent:
         q_sa_next = np.array([self.q_hat(state, a) for a in self._all_actions])
         greedy_action_inds = np.where(q_sa_next == q_sa_next.max())[0]
         ind_action = np.random.choice(greedy_action_inds) # randomly choose between maximum q values
-        action = self._all_actions[ind_action]
-
-        return action
+        return self._all_actions[ind_action]
 
     def get_init_state(self):
         """Get a random starting position in the interval [-0.6, -0.4)."""
@@ -427,8 +421,7 @@ class MountainCarAgent:
         if x == self._pos_terminal: return 0
 
         x_s_a = self._iht.get_tiles(state, action)
-        q = np.array([self._w[id_w] for id_w in x_s_a]).sum()
-        return q
+        return np.array([self._w[id_w] for id_w in x_s_a]).sum()
 
     def get_active_features(self, state, action):
         """Get an array containing the ids of the current active features."""
@@ -449,8 +442,7 @@ class MountainCarAgent:
 
         overflow_flag = False
 
-        for i_ep in range(n_episodes):
-
+        for _ in range(n_episodes):
             if overflow_flag:
                 # Training diverged : set default worse value for all the remaining epochs
                 self._n_step_hist.append(self.max_n_step)
@@ -464,7 +456,7 @@ class MountainCarAgent:
             self._z = np.zeros(self._w.shape)
 
             running = True
-            while(running):
+            while running:
 
                 try:
                     next_state, reward = env.step(state, action)
@@ -491,13 +483,14 @@ class MountainCarAgent:
 
                 except ValueError:
                     overflow_msg = 'λ>0.9 : expected behavior !' if (self._λ > .9) else 'Training diverged, try a lower α.'
-                    print(f'Warning : Value overflow.| λ={self._λ} , α*num_tile={self._α} | ' + overflow_msg)
+                    print(
+                        f'Warning : Value overflow.| λ={self._λ} , α*num_tile={self._α} | {overflow_msg}'
+                    )
+
 
                     # Training data lists will be fed with default worse values for all the remaining epochs.
                     overflow_flag = True
                     running = False
-                    continue
-
             if overflow_flag:
                 n_it = self.max_n_step
 
@@ -563,12 +556,7 @@ class CartPoleEnvironment:
     def is_state_valid(self, state):
         x, _, theta, _ = state
         # Velocities aren't bounded, therefore cannot be checked.
-        is_state_invalid = bool(
-            x < -4.8
-            or x > 4.8
-            or theta < -0.418
-            or theta > 0.418
-        )
+        is_state_invalid = x < -4.8 or x > 4.8 or theta < -0.418 or theta > 0.418
         return not is_state_invalid
 
     def step(self, state, action):
@@ -636,35 +624,28 @@ class CartPoleAgent:
     def policy(self, state):
         """Apply a ε-greedy policy to choose an action from state."""
         if np.random.random_sample() < self._ε:
-            action = self._all_actions[np.random.choice(range(len(self._all_actions)))]
-            return action
+            return self._all_actions[np.random.choice(range(len(self._all_actions)))]
 
         q_sa_next = np.array([self.q_hat(state, a) for a in self._all_actions])
         greedy_action_inds = np.where(q_sa_next == q_sa_next.max())[0]
         ind_action = np.random.choice(greedy_action_inds)
-        action = self._all_actions[ind_action]
-
-        return action
+        return self._all_actions[ind_action]
 
     def is_state_valid(self, state):
         x, _, theta, _ = state
-        is_state_invalid = bool(
-            x < -4.8 or x > 4.8
-            or theta < -0.418 or theta > 0.418
-        )
+        is_state_invalid = x < -4.8 or x > 4.8 or theta < -0.418 or theta > 0.418
         return not is_state_invalid
 
     def get_init_state(self):
         """Get a random starting position."""
-        state = np.random.uniform(low=-0.05, high=0.05, size=(4,))
-        return state
+        return np.random.uniform(low=-0.05, high=0.05, size=(4,))
 
     def is_state_over_bounds(self, state):
         """Returns True if the current state is out of bounds, i.e. the current run is over. Returns
         False otherwise."""
 
         x, x_dot, theta, theta_dot = state
-        return bool(
+        return (
             x < -self.x_threshold
             or x > self.x_threshold
             or theta < -self.theta_threshold_radians
@@ -676,8 +657,7 @@ class CartPoleAgent:
         if self.is_state_over_bounds(state): return 0.
 
         x_s_a = self._iht.get_tiles(state, action)
-        q = np.array([self._w[id_w] for id_w in x_s_a]).sum()
-        return q
+        return np.array([self._w[id_w] for id_w in x_s_a]).sum()
 
     def get_active_features(self, state, action):
         """Get an array containing the ids of the current active features."""
@@ -740,7 +720,10 @@ class CartPoleAgent:
 
                 except ValueError:
                     overflow_msg = 'λ>0.9 : expected behavior !' if (self._λ > .9) else 'Training diverged, try a lower α.'
-                    print(f'Warning : Value overflow.| λ={self._λ} , α*num_tile={self._α} | ' + overflow_msg)
+                    print(
+                        f'Warning : Value overflow.| λ={self._λ} , α*num_tile={self._α} | {overflow_msg}'
+                    )
+
 
                     # Training metric is set with the default worse value.
                     self._n_failures = self.max_n_failures
@@ -841,9 +824,7 @@ class PuddleWorldGrid:
 
         if min_dist2centers <= self._puddle_radius:
             dist2border = self._puddle_radius - min_dist2centers
-            if max_dist < dist2border:
-                max_dist = dist2border
-
+            max_dist = max(max_dist, dist2border)
         # Horizontal puddle axis
         if (j >= p_horiz_j_1) and (j <= p_horiz_j_2):
             dist2horiz_axis_p = np.abs(i - p_horiz_i_1)
@@ -862,8 +843,7 @@ class PuddleWorldGrid:
                 if max_dist < dist2border:
                     max_dist = dist2border
 
-        dist2puddle = max_dist
-        return dist2puddle
+        return max_dist
 
     def cvt_ij2xy(self, pos_ij):
         return pos_ij[1], self._h - pos_ij[0]
@@ -965,15 +945,13 @@ class PuddleWorldAgent:
         """Apply a ε-greedy policy to choose an action from state."""
 
         if np.random.random_sample() < self._ε:
-            action = self._all_actions[np.random.choice(range(len(self._all_actions)))]
-            return action
+            return self._all_actions[np.random.choice(range(len(self._all_actions)))]
 
         q_hat = np.array([self.q_hat(state, a) for a in self._all_actions])
         greedy_action_inds = np.where(q_hat == q_hat.max())[0]
         ind_action = np.random.choice(greedy_action_inds)
 
-        action = self._all_actions[ind_action]
-        return action
+        return self._all_actions[ind_action]
 
     def get_start_pos(self):
         """Randomly pick a non-goal state as starting position."""
@@ -999,8 +977,7 @@ class PuddleWorldAgent:
             return 0.
 
         x_s_a = self._iht.get_tiles(state, action)
-        q = np.array([self._w[id_w] for id_w in x_s_a]).sum()
-        return q
+        return np.array([self._w[id_w] for id_w in x_s_a]).sum()
 
     def get_active_features(self, state, action):
         """Get an array containing the ids of the current active features."""
@@ -1019,7 +996,7 @@ class PuddleWorldAgent:
         """
         assert method in ['replace_reset'], 'Invalid method arg.'
 
-        for i_ep in range(n_episodes):
+        for _ in range(n_episodes):
             cumu_reward = 0 # cumulated reward
 
             state = self.get_start_pos()
@@ -1169,8 +1146,7 @@ def get_mountain_car_plot_data():
         all_df_vis[df_str_key] = pd.DataFrame(np.array(n_step_per_ep), columns=['lambda', 'steps'])
         all_df_vis[df_str_key]['method'] = np.full(len(n_step_per_ep), method)
 
-    df_vis = pd.concat(all_df_vis.values(), ignore_index=True)
-    return df_vis
+    return pd.concat(all_df_vis.values(), ignore_index=True)
 
 
 def get_cart_pole_plot_data():
@@ -1184,8 +1160,6 @@ def get_cart_pole_plot_data():
     # Optimal alpha coefficient for each lambda
     alpha_range = [.3, .3, .3, .3, .1, .1, .1, .1]
 
-    all_df_vis = {}
-
     n_fail_lambdas = []
     for n_run in tqdm(range(n_runs), desc=f'CART POLE | method={method}'):
         for λ, α in zip(lambda_range, alpha_range):
@@ -1196,11 +1170,15 @@ def get_cart_pole_plot_data():
             n_fail_lambdas.append([λ, cart_pole.n_failures])
 
     df_str_key = f'{n_runs}'
-    all_df_vis[df_str_key] = pd.DataFrame(np.array(n_fail_lambdas), columns=['lambda', 'n_fails'])
+    all_df_vis = {
+        df_str_key: pd.DataFrame(
+            np.array(n_fail_lambdas), columns=['lambda', 'n_fails']
+        )
+    }
+
     all_df_vis[df_str_key]['method'] = np.full(len(n_fail_lambdas), method)
 
-    df_vis = pd.concat(all_df_vis.values())
-    return df_vis
+    return pd.concat(all_df_vis.values())
 
 
 def get_puddle_world_plot_data():
@@ -1214,13 +1192,11 @@ def get_puddle_world_plot_data():
     # Optimal alpha coefficient for each lambda
     alpha_range = [.7, .7, .5, .5, .5, .5, .5, .3]
 
-    all_df_vis = {}
-
     rand_seed = 0
     np.random.seed(rand_seed)
 
     cost_per_ep = []
-    for n_run in tqdm(range(n_runs), desc=f'PUDDLE WORLD | method={method}'):
+    for _ in tqdm(range(n_runs), desc=f'PUDDLE WORLD | method={method}'):
         for λ, α in zip(lambda_range, alpha_range):
 
             puddle_world = PuddleWorld(lmbda=λ, alpha=α)
@@ -1229,11 +1205,15 @@ def get_puddle_world_plot_data():
             cost_per_ep.append([λ, np.array(puddle_world.cost_per_ep_hist).mean()])
 
     df_str_key = f'{rand_seed}'
-    all_df_vis[df_str_key] = pd.DataFrame(np.array(cost_per_ep), columns=['lambda', 'cost'])
+    all_df_vis = {
+        df_str_key: pd.DataFrame(
+            np.array(cost_per_ep), columns=['lambda', 'cost']
+        )
+    }
+
     all_df_vis[df_str_key]['method'] = np.full(len(cost_per_ep), method)
 
-    df_vis = pd.concat(all_df_vis.values())
-    return df_vis
+    return pd.concat(all_df_vis.values())
 
 
 #----------------------------------#
@@ -1254,28 +1234,28 @@ def figure_12_14():
                  style='method', ax=axes[0, 0], marker='o', ci=68, err_style="bars")
     axes[0, 0].set_xlabel('λ')
     axes[0, 0].set_ylabel('Steps per episode')
-    axes[0, 0].set_title(f"MOUNTAIN CAR", fontsize=15)
+    axes[0, 0].set_title("MOUNTAIN CAR", fontsize=15)
     axes[0, 0].set_ylim(0, 500)
 
     # Random walk
     sns.lineplot(data=df_rw, x='lambda', y='rms', hue='method', style='method', ax=axes[0, 1], marker='o')
     axes[0, 1].set_xlabel('λ')
     axes[0, 1].set_ylabel('RMS error')
-    axes[0, 1].set_title(f"RANDOM WALK", fontsize=15)
+    axes[0, 1].set_title("RANDOM WALK", fontsize=15)
     axes[0, 1].set_ylim(0.2, 0.6)
 
     # Puddle world
     sns.lineplot(data=df_pw, x='lambda', y='cost', hue='method', ax=axes[1, 0], marker='o', ci=68, err_style="bars")
     axes[1, 0].set_xlabel('λ')
     axes[1, 0].set_ylabel('Cost per episode')
-    axes[1, 0].set_title(f"PUDDLE WORLD", fontsize=15)
+    axes[1, 0].set_title("PUDDLE WORLD", fontsize=15)
 
     # Cart and pole
     sns.lineplot(data=df_cp, x='lambda', y='n_fails', hue='method', ax=axes[1, 1], marker='o', ci=68,
                  err_style="bars")
     axes[1, 1].set_xlabel('λ')
     axes[1, 1].set_ylabel('Failures per 100 000 steps')
-    axes[1, 1].set_title(f"CART AND POLE", fontsize=15)
+    axes[1, 1].set_title("CART AND POLE", fontsize=15)
 
     plt.savefig('combined_fig_test')
     #plt.waitforbuttonpress()

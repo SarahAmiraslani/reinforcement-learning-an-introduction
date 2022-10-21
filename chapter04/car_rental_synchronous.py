@@ -37,7 +37,7 @@ RETURNS_FIRST_LOC = 3
 RETURNS_SECOND_LOC = 2
 ################################################################
 
-poisson_cache = dict()
+poisson_cache = {}
 
 
 def poisson(n, lam):
@@ -101,14 +101,14 @@ class PolicyIteration:
             print(f'Difference: {difference}')
             values = new_values
             if difference < self.delta:
-                print(f'Values are converged!')
+                print('Values are converged!')
                 return values
 
     def policy_improvement(self, actions, values, policy):
         new_policy = np.copy(policy)
 
         expected_action_returns = np.zeros((MAX_CARS + 1, MAX_CARS + 1, np.size(actions)))
-        cooks = dict()
+        cooks = {}
         with mp.Pool(processes=8) as p:
             for action in actions:
                 k = np.arange(MAX_CARS + 1)
@@ -128,17 +128,13 @@ class PolicyIteration:
     # O(n^4) computation for all possible requests and returns
     def bellman(self, values, action, state):
         expected_return = 0
-        if self.solve_extension:
-            if action > 0:
-                # Free shuttle to the second location
-                expected_return += MOVE_COST * (action - 1)
-            else:
-                expected_return += MOVE_COST * abs(action)
+        if self.solve_extension and action > 0:
+            # Free shuttle to the second location
+            expected_return += MOVE_COST * (action - 1)
         else:
             expected_return += MOVE_COST * abs(action)
-
-        for req1 in range(0, self.TRUNCATE):
-            for req2 in range(0, self.TRUNCATE):
+        for req1 in range(self.TRUNCATE):
+            for req2 in range(self.TRUNCATE):
                 # moving cars
                 num_of_cars_first_loc = int(min(state[0] - action, MAX_CARS))
                 num_of_cars_second_loc = int(min(state[1] + action, MAX_CARS))
@@ -161,13 +157,13 @@ class PolicyIteration:
 
                 # probability for current combination of rental requests
                 prob = poisson(req1, RENTAL_REQUEST_FIRST_LOC) * \
-                       poisson(req2, RENTAL_REQUEST_SECOND_LOC)
-                for ret1 in range(0, self.TRUNCATE):
-                    for ret2 in range(0, self.TRUNCATE):
+                           poisson(req2, RENTAL_REQUEST_SECOND_LOC)
+                for ret1 in range(self.TRUNCATE):
+                    for ret2 in range(self.TRUNCATE):
                         num_of_cars_first_loc_ = min(num_of_cars_first_loc + ret1, MAX_CARS)
                         num_of_cars_second_loc_ = min(num_of_cars_second_loc + ret2, MAX_CARS)
                         prob_ = poisson(ret1, RETURNS_FIRST_LOC) * \
-                                poisson(ret2, RETURNS_SECOND_LOC) * prob
+                                    poisson(ret2, RETURNS_SECOND_LOC) * prob
                         # Classic Bellman equation for state-value
                         # prob_ corresponds to p(s'|s,a) for each possible s' -> (num_of_cars_first_loc_,num_of_cars_second_loc_)
                         expected_return += prob_ * (
@@ -185,7 +181,9 @@ class PolicyIteration:
     # Expected return calculator for Policy Improvement
     def expected_return_pi(self, values, action, state):
 
-        if ((action >= 0 and state[0] >= action) or (action < 0 and state[1] >= abs(action))) == False:
+        if (action < 0 or state[0] < action) and (
+            action >= 0 or state[1] < abs(action)
+        ):
             return -float('inf'), state[0], state[1], action
         expected_return = self.bellman(values, action, state)
         return expected_return, state[0], state[1], action
