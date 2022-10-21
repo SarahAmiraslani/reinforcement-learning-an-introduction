@@ -67,10 +67,7 @@ def compute_state_value(in_place=True, discount=1.0):
     new_state_values = np.zeros((WORLD_SIZE, WORLD_SIZE))
     iteration = 0
     while True:
-        if in_place:
-            state_values = new_state_values
-        else:
-            state_values = new_state_values.copy()
+        state_values = new_state_values if in_place else new_state_values.copy()
         old_state_values = state_values.copy()
 
         for i in range(WORLD_SIZE):
@@ -96,8 +93,8 @@ def figure_4_1():
     _, asycn_iteration = compute_state_value(in_place=True)
     values, sync_iteration = compute_state_value(in_place=False)
     draw_image(np.round(values, decimals=2))
-    print('In-place: {} iterations'.format(asycn_iteration))
-    print('Synchronous: {} iterations'.format(sync_iteration))
+    print(f'In-place: {asycn_iteration} iterations')
+    print(f'Synchronous: {sync_iteration} iterations')
 
     plt.savefig('../images/figure_4_1.png')
     plt.close()

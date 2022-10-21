@@ -50,7 +50,7 @@ POISSON_UPPER_BOUND = 11
 
 # Probability for poisson distribution
 # @lam: lambda should be less than 10 for this function
-poisson_cache = dict()
+poisson_cache = {}
 
 
 def poisson_probability(n, lam):
@@ -134,7 +134,7 @@ def figure_4_2(constant_returned_cars=True):
         fig.set_ylabel('# cars at first location', fontsize=30)
         fig.set_yticks(list(reversed(range(MAX_CARS + 1))))
         fig.set_xlabel('# cars at second location', fontsize=30)
-        fig.set_title('policy {}'.format(iterations), fontsize=30)
+        fig.set_title(f'policy {iterations}', fontsize=30)
 
         # policy evaluation (in-place)
         while True:
@@ -144,7 +144,7 @@ def figure_4_2(constant_returned_cars=True):
                     new_state_value = expected_return([i, j], policy[i, j], value, constant_returned_cars)
                     value[i, j] = new_state_value
             max_value_change = abs(old_value - value).max()
-            print('max value change {}'.format(max_value_change))
+            print(f'max value change {max_value_change}')
             if max_value_change < 1e-4:
                 break
 
@@ -163,7 +163,7 @@ def figure_4_2(constant_returned_cars=True):
                 policy[i, j] = new_action
                 if policy_stable and old_action != new_action:
                     policy_stable = False
-        print('policy stable {}'.format(policy_stable))
+        print(f'policy stable {policy_stable}')
 
         if policy_stable:
             fig = sns.heatmap(np.flipud(value), cmap="YlGnBu", ax=axes[-1])

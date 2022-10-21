@@ -128,12 +128,12 @@ class ValueFunction:
 
     # get indices of active tiles for given state and action
     def get_active_tiles(self, position, velocity, action):
-        # I think positionScale * (position - position_min) would be a good normalization.
-        # However positionScale * position_min is a constant, so it's ok to ignore it.
-        active_tiles = tiles(self.hash_table, self.num_of_tilings,
-                            [self.position_scale * position, self.velocity_scale * velocity],
-                            [action])
-        return active_tiles
+        return tiles(
+            self.hash_table,
+            self.num_of_tilings,
+            [self.position_scale * position, self.velocity_scale * velocity],
+            [action],
+        )
 
     # estimate the value of given state and action
     def value(self, position, velocity, action):
@@ -152,18 +152,17 @@ class ValueFunction:
 
     # get # of steps to reach the goal under current state value function
     def cost_to_go(self, position, velocity):
-        costs = []
-        for action in ACTIONS:
-            costs.append(self.value(position, velocity, action))
+        costs = [self.value(position, velocity, action) for action in ACTIONS]
         return -np.max(costs)
 
 # get action at @position and @velocity based on epsilon greedy policy and @valueFunction
 def get_action(position, velocity, value_function):
     if np.random.binomial(1, EPSILON) == 1:
         return np.random.choice(ACTIONS)
-    values = []
-    for action in ACTIONS:
-        values.append(value_function.value(position, velocity, action))
+    values = [
+        value_function.value(position, velocity, action) for action in ACTIONS
+    ]
+
     return np.random.choice([action_ for action_, value_ in enumerate(values) if value_ == np.max(values)]) - 1
 
 # semi-gradient n-step Sarsa
@@ -279,7 +278,7 @@ def figure_10_2():
     alphas = [0.1, 0.2, 0.5]
 
     steps = np.zeros((len(alphas), episodes))
-    for run in range(runs):
+    for _ in range(runs):
         value_functions = [ValueFunction(alpha, num_of_tilings) for alpha in alphas]
         for index in range(len(value_functions)):
             for episode in tqdm(range(episodes)):
@@ -288,8 +287,8 @@ def figure_10_2():
 
     steps /= runs
 
-    for i in range(0, len(alphas)):
-        plt.plot(steps[i], label='alpha = '+str(alphas[i])+'/'+str(num_of_tilings))
+    for i in range(len(alphas)):
+        plt.plot(steps[i], label=f'alpha = {str(alphas[i])}/{num_of_tilings}')
     plt.xlabel('Episode')
     plt.ylabel('Steps per episode')
     plt.yscale('log')
@@ -307,7 +306,7 @@ def figure_10_3():
     n_steps = [1, 8]
 
     steps = np.zeros((len(alphas), episodes))
-    for run in range(runs):
+    for _ in range(runs):
         value_functions = [ValueFunction(alpha, num_of_tilings) for alpha in alphas]
         for index in range(len(value_functions)):
             for episode in tqdm(range(episodes)):
@@ -316,7 +315,7 @@ def figure_10_3():
 
     steps /= runs
 
-    for i in range(0, len(alphas)):
+    for i in range(len(alphas)):
         plt.plot(steps[i], label='n = %.01f' % (n_steps[i]))
     plt.xlabel('Episode')
     plt.ylabel('Steps per episode')
@@ -335,7 +334,7 @@ def figure_10_4():
 
     max_steps = 300
     steps = np.zeros((len(n_steps), len(alphas)))
-    for run in range(runs):
+    for _ in range(runs):
         for n_step_index, n_step in enumerate(n_steps):
             for alpha_index, alpha in enumerate(alphas):
                 if (n_step == 8 and alpha > 1) or \
@@ -344,15 +343,15 @@ def figure_10_4():
                     steps[n_step_index, alpha_index] += max_steps * episodes
                     continue
                 value_function = ValueFunction(alpha)
-                for episode in tqdm(range(episodes)):
+                for _ in tqdm(range(episodes)):
                     step = semi_gradient_n_step_sarsa(value_function, n_step)
                     steps[n_step_index, alpha_index] += step
 
     # average over independent runs and episodes
     steps /= runs * episodes
 
-    for i in range(0, len(n_steps)):
-        plt.plot(alphas, steps[i, :], label='n = '+str(n_steps[i]))
+    for i in range(len(n_steps)):
+        plt.plot(alphas, steps[i, :], label=f'n = {str(n_steps[i])}')
     plt.xlabel('alpha * number of tilings(8)')
     plt.ylabel('Steps per episode')
     plt.ylim([220, max_steps])

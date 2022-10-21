@@ -89,14 +89,7 @@ def figure_6_3():
     q_value = np.zeros((WORLD_HEIGHT, WORLD_WIDTH, 4))
     episode_limit = 500
 
-    steps = []
-    ep = 0
-    while ep < episode_limit:
-        steps.append(episode(q_value))
-        # time = episode(q_value)
-        # episodes.extend([ep] * time)
-        ep += 1
-
+    steps = [episode(q_value) for _ in range(episode_limit)]
     steps = np.add.accumulate(steps)
 
     plt.plot(steps, np.arange(1, len(steps) + 1))
@@ -108,9 +101,9 @@ def figure_6_3():
 
     # display the optimal policy
     optimal_policy = []
-    for i in range(0, WORLD_HEIGHT):
+    for i in range(WORLD_HEIGHT):
         optimal_policy.append([])
-        for j in range(0, WORLD_WIDTH):
+        for j in range(WORLD_WIDTH):
             if [i, j] == GOAL:
                 optimal_policy[-1].append('G')
                 continue
@@ -126,7 +119,7 @@ def figure_6_3():
     print('Optimal policy is:')
     for row in optimal_policy:
         print(row)
-    print('Wind strength for each column:\n{}'.format([str(w) for w in WIND]))
+    print(f'Wind strength for each column:\n{[str(w) for w in WIND]}')
 
 if __name__ == '__main__':
     figure_6_3()
